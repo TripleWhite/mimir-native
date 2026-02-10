@@ -128,8 +128,8 @@ class HybridRetriever:
             logger.info(f"查询类型自动检测: {query_type.value}")
         
         # 2. 并行检索（各信号独立召回）
-        vector_results = self._vector_search(query, user_id, top_k * 2, filters)
-        fts_results = self._fts_search(query, user_id, top_k * 2, filters)
+        vector_results = self._vector_search(query, user_id, top_k * 3, filters)  # 增加召回数量
+        fts_results = self._fts_search(query, user_id, top_k * 3, filters)  # 增加召回数量
         
         temporal_results = []
         graph_results = []
@@ -158,11 +158,14 @@ class HybridRetriever:
         weights = self.weights.get(query_type, self.weights[QueryType.FACTUAL])
         ranked = self._rank_with_weights(merged, weights, query_type)
         
-        # 5. 应用过滤条件
+        # 5. 过滤低相关性结果（避免干扰）
+        ranked = [r for r in ranked if r.final_score > 0.1]  # 只保留相关度 > 0.1 的结果
+        
+        # 6. 应用过滤条件
         if filters:
             ranked = self._apply_filters(ranked, filters)
         
-        # 6. 返回 top_k
+        # 7. 返回 top_k
         return ranked[:top_k]
     
     def _classify_query(self, query: str) -> QueryType:

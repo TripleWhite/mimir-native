@@ -113,23 +113,32 @@ def test_locomo_10q_fast():
             
             logger.info(f"\n   Q{i}: {question[:60]}...")
             
-            # 生成答案
+            # 生成答案 - 优化 prompt
             try:
                 contexts = mimir.query(question, user_id='locomo_test', top_k=5)
-                # 限制上下文长度，避免超过 LLM token 限制
-                context_text = "\n".join([str(c) for c in contexts])
-                if len(context_text) > 15000:  # 限制约 4000 tokens
-                    context_text = context_text[:15000] + "..."
                 
-                prompt = f"""Based on the following context, answer the question concisely.
+                # 按相关性排序（分数高的在前）
+                contexts.sort(key=lambda x: x.score if hasattr(x, 'score') else 0, reverse=True)
+                
+                # 只取最相关的 3 条，避免干扰
+                context_text = "\n".join([str(c.memory if hasattr(c, 'memory') else c) for c in contexts[:3]])
+                
+                # 优化 prompt - 更明确的指令
+                prompt = f"""You are a helpful assistant. Answer the question based ONLY on the provided context.
 
-Context:
+Context (most relevant facts):
 {context_text}
 
 Question: {question}
 
+Instructions:
+1. If the context contains the answer, provide it directly and concisely
+2. If the context implies the answer but doesn't state it explicitly, make a reasonable inference
+3. Only say "I don't know" if the context truly contains no relevant information
+
 Answer:"""
-                prediction = llm.invoke_mistral(prompt)
+                
+                prediction = llm.invoke_mistral(prompt, max_tokens=100, temperature=0.1)
             except Exception as e:
                 logger.warning(f"      Error: {e}")
                 prediction = ""

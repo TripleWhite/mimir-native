@@ -281,20 +281,21 @@ class BedrockClient:
 
 关键要求:
 1. **提取所有有意义的陈述**，即使是简单的事实（如"某人身份"、"某人的喜好"）
-2. 每个事实应该是自包含的，无需上下文就能理解
-3. 保留所有时间信息（绝对或相对）
-4. 识别涉及的实体（人名、地点、组织等）
+2. **保持原文语言**：如果输入是英文，fact 字段必须是英文，不要翻译
+3. **保留所有时间信息**：原始日期格式必须保留（如 "7 May 2023"）
+4. 每个事实应该是自包含的，无需上下文就能理解
+5. 识别涉及的实体（人名、地点、组织等）
 
 事实类型: event | preference | relationship | work | personal_info | other
 
 输出 JSON 数组格式:
 [
   {{
-    "fact": "事实陈述（简洁完整）",
+    "fact": "事实陈述（保持原文语言，不要翻译）",
     "temporal_info": {{
       "absolute_time": "YYYY-MM-DD 格式或 null",
       "relative_time": "如 'yesterday' 或 null",
-      "time_mentions": ["文中提到的所有时间"]
+      "time_mentions": ["文中提到的所有时间，保持原始格式"]
     }},
     "entities": ["实体1", "实体2"],
     "fact_type": "personal_info",
@@ -302,8 +303,10 @@ class BedrockClient:
   }}
 ]
 
-**重要**: 不要过滤！即使是简单的陈述（如"A是B"、"A喜欢B"）也要提取。
-只输出 JSON，不要其他文字。"""
+**重要**: 
+- 不要过滤！即使是简单的陈述也要提取
+- 不要翻译！保持输入文本的原始语言
+- 只输出 JSON，不要其他文字。"""
 
         # 优先使用 Silicon Flow
         if self._siliconflow:

@@ -182,43 +182,40 @@ class SiliconFlowClient:
         """
         context = context or {}
 
-        prompt = f"""从以下文本中提取关键事实。
+        prompt = f"""从以下文本中提取所有事实陈述。
 
 文本: {text}
 
 上下文: {json.dumps(context, ensure_ascii=False)}
 
-要求:
-1. 每个事实应该是自包含的陈述
-2. 保留所有时间信息（绝对或相对）
-3. 识别涉及的实体（人名、地点、组织等）
-4. 区分事实类型: event | preference | relationship | work | personal_info | other
+关键要求:
+1. **提取所有有意义的陈述**，即使是简单的事实（如"某人身份"、"某人的喜好"）
+2. **保持原文语言**：如果输入是英文，fact 字段必须是英文，不要翻译
+3. **保留所有时间信息**：原始日期格式必须保留（如 "7 May 2023"）
+4. 每个事实应该是自包含的，无需上下文就能理解
+5. 识别涉及的实体（人名、地点、组织等）
 
-事实类型说明:
-- event: 事件（如会议、旅行、生日）
-- preference: 偏好（如喜欢/不喜欢）
-- relationship: 关系（如朋友、同事、家人）
-- work: 工作相关（如项目、任务、公司）
-- personal_info: 个人信息（如住址、联系方式）
-- other: 其他
+事实类型: event | preference | relationship | work | personal_info | other
 
 输出 JSON 数组格式:
 [
   {{
-    "fact": "事实陈述（简洁清晰）",
+    "fact": "事实陈述（保持原文语言，不要翻译）",
     "temporal_info": {{
       "absolute_time": "YYYY-MM-DD 格式或 null",
-      "relative_time": "如 'yesterday', 'last week' 或 null",
-      "time_mentions": ["文中提到的所有时间"]
+      "relative_time": "如 'yesterday' 或 null",
+      "time_mentions": ["文中提到的所有时间，保持原始格式"]
     }},
     "entities": ["实体1", "实体2"],
-    "fact_type": "event",
+    "fact_type": "personal_info",
     "confidence": 0.95
   }}
 ]
 
-如果没有事实可提取，返回 []。
-只输出 JSON，不要其他文字说明。"""
+**重要**: 
+- 不要过滤！即使是简单的陈述也要提取
+- 不要翻译！保持输入文本的原始语言
+- 只输出 JSON，不要其他文字。"""
 
         try:
             response = self.generate(prompt, max_tokens=1500, temperature=0.0)

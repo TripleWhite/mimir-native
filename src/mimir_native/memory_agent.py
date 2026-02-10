@@ -33,14 +33,14 @@ class MemoryAgent:
     """
     
     def __init__(self, db: MimirDatabase, llm_client: BedrockClient = None,
-                 similarity_threshold: float = 0.85):
+                 similarity_threshold: float = 0.75):
         """
         初始化 Memory Agent
         
         Args:
             db: MimirDatabase 实例
             llm_client: BedrockClient 实例（可选，会自动创建）
-            similarity_threshold: 相似度阈值，默认 0.85
+            similarity_threshold: 相似度阈值，默认 0.75（降低以减少误判）
         """
         self.db = db
         self.llm = llm_client or create_llm_client()

@@ -139,22 +139,23 @@ def test_locomo_10q_fast():
                 
                 context_text = "\n".join(selected_contexts)
                 
-                # 优化 prompt - 更明确的指令
-                prompt = f"""You are a helpful assistant. Answer the question based ONLY on the provided context.
+                # 优化 prompt - 更明确的指令，要求直接回答
+                prompt = f"""Answer the question based on the context. Be direct and concise.
 
-Context (most relevant facts):
+Context:
 {context_text}
 
 Question: {question}
 
 Instructions:
-1. If the context contains the answer, provide it directly and concisely
-2. If the context implies the answer but doesn't state it explicitly, make a reasonable inference
-3. Only say "I don't know" if the context truly contains no relevant information
+1. Answer with just the fact, no explanation
+2. If the context mentions a date, use that exact date
+3. If unsure, give your best guess based on the context
+4. Maximum 20 words
 
 Answer:"""
                 
-                prediction = llm.invoke_mistral(prompt, max_tokens=100, temperature=0.1)
+                prediction = llm.invoke_mistral(prompt, max_tokens=50, temperature=0.0)
             except Exception as e:
                 logger.warning(f"      Error: {e}")
                 prediction = ""

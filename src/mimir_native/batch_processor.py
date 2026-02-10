@@ -124,24 +124,27 @@ class BatchProcessor:
         Returns:
             [{'fact': '...', 'metadata': {...}}, ...]
         """
-        prompt = f"""从以下带编号的对话中提取客观事实。
+        prompt = f"""从以下带编号的对话中提取客观事实和人物属性。
 
 对话内容:
 {combined_text}
 
 规则:
 1. 为每个 [编号] 提取相关事实
-2. 保留所有具体时间（如 "7 May 2023"）
-3. 每个事实应该自包含
-4. 输出格式：JSON 数组
+2. **提取所有人物属性**：身份、职业、关系状态、兴趣爱好等
+3. 保留所有具体时间（如 "7 May 2023"）
+4. 每个事实应该自包含
+5. 输出格式：JSON 数组
 
 输出示例:
 [
-  {{"source_idx": 0, "fact": "Caroline visited the LGBTQ support group yesterday.", "temporal_info": {{"absolute_time": null, "relative_time": "yesterday"}}, "entities": ["Caroline", "LGBTQ support group"]}},
-  {{"source_idx": 1, "fact": "Melanie painted a sunrise last year.", "temporal_info": {{"absolute_time": null, "relative_time": "last year"}}, "entities": ["Melanie"]}}
+  {{"source_idx": 0, "fact": "Caroline visited the LGBTQ support group yesterday.", "temporal_info": {{"absolute_time": null, "relative_time": "yesterday"}}, "entities": ["Caroline", "LGBTQ support group"], "fact_type": "event"}},
+  {{"source_idx": 1, "fact": "Caroline is a transgender woman.", "temporal_info": {{}}, "entities": ["Caroline"], "fact_type": "personal_info"}},
+  {{"source_idx": 2, "fact": "Melanie is single.", "temporal_info": {{}}, "entities": ["Melanie"], "fact_type": "personal_info"}},
+  {{"source_idx": 3, "fact": "Melanie painted a sunrise last year.", "temporal_info": {{"absolute_time": null, "relative_time": "last year"}}, "entities": ["Melanie"], "fact_type": "event"}}
 ]
 
-请提取所有事实:"""
+请提取所有事实（包括人物属性、事件、计划、偏好等）:"""
 
         try:
             response = self.llm.invoke_mistral(prompt, max_tokens=2000)

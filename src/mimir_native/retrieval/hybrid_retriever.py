@@ -76,27 +76,27 @@ class HybridRetriever:
         self.kg = kg
         self.llm_client = llm_client
         
-        # 默认权重配置
+        # 默认权重配置 - 优化 for LoCoMo
         self.weights = weights or {
             QueryType.FACTUAL: {
-                'vector': 0.5,
-                'fts': 0.3,
+                'vector': 0.6,  # 提高向量权重
+                'fts': 0.3,     # 提高 FTS 权重
                 'temporal': 0.0,
                 'graph': 0.0,
-                'recency': 0.2
+                'recency': 0.1
             },
             QueryType.TEMPORAL: {
-                'vector': 0.3,
-                'fts': 0.2,
-                'temporal': 0.4,
+                'vector': 0.4,
+                'fts': 0.3,
+                'temporal': 0.2,
                 'graph': 0.0,
                 'recency': 0.1
             },
             QueryType.MULTI_HOP: {
-                'vector': 0.3,
-                'fts': 0.2,
+                'vector': 0.4,
+                'fts': 0.3,
                 'temporal': 0.0,
-                'graph': 0.4,
+                'graph': 0.2,
                 'recency': 0.1
             }
         }
@@ -159,7 +159,7 @@ class HybridRetriever:
         ranked = self._rank_with_weights(merged, weights, query_type)
         
         # 5. 过滤低相关性结果（避免干扰）
-        ranked = [r for r in ranked if r.final_score > 0.1]  # 只保留相关度 > 0.1 的结果
+        ranked = [r for r in ranked if r.final_score > 0.05]  # 降低阈值到 0.05
         
         # 6. 应用过滤条件
         if filters:

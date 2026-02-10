@@ -199,11 +199,42 @@ class MemoryAgent:
             fact_dicts = self.llm.extract_facts(text, metadata or {})
             facts = []
             
+            # 获取参考日期（从 metadata 中）
+            reference_date = None
+            if metadata:
+                date_str = metadata.get('session_date') or metadata.get('date')
+                if date_str:
+                    try:
+                        from ..preprocessors.base import parse_date
+                        reference_date = parse_date(date_str)
+                    except:
+                        pass
+            
+            # 导入时间解析器
+            from ..temporal_resolver import TemporalResolver
+            resolver = TemporalResolver()
+            
             for fd in fact_dicts:
                 try:
+                    fact_text = fd.get('fact', '')
+                    temporal_info = fd.get('temporal_info', {})
+                    
+                    # 如果有参考日期，解析相对时间
+                    if reference_date and fact_text:
+                        resolved = resolver.extract_and_resolve(fact_text, reference_date)
+                        if resolved:
+                            # 将解析后的时间添加到事实文本中
+                            for expr, absolute in resolved.items():
+                                # 在事实后附加绝对时间
+                                if absolute not in fact_text:
+                                    fact_text += f" (Date: {absolute})"
+                            # 更新 temporal_info
+                            if not temporal_info.get('absolute_time') and resolved:
+                                temporal_info['absolute_time'] = list(resolved.values())[0]
+                    
                     fact = Fact(
-                        fact=fd.get('fact', ''),
-                        temporal_info=fd.get('temporal_info', {}),
+                        fact=fact_text,
+                        temporal_info=temporal_info,
                         entities=fd.get('entities', []),
                         fact_type=fd.get('fact_type', 'event'),
                         confidence=fd.get('confidence', 1.0)

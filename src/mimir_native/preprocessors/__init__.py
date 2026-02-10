@@ -87,7 +87,23 @@ class MultimodalPreprocessor:
                 print(f"警告: Bedrock 客户端初始化失败: {e}")
                 bedrock_client = None
         
+        # 纯文本处理器（简单包装）
+        class TextProcessor(BasePreprocessor):
+            def process(self, content, metadata):
+                from .base import RawContent
+                text = content if isinstance(content, str) else str(content)
+                return RawContent(
+                    text=text,
+                    summary=text[:200] + "..." if len(text) > 200 else text,
+                    chunks=[text],
+                    metadata=metadata,
+                    occurred_at=metadata.get('occurred_at') or metadata.get('timestamp')
+                )
+            def supports(self, content_type):
+                return content_type in ['text', 'plain']
+        
         self.processors = {
+            'text': TextProcessor(),  # 纯文本
             'document': DocumentProcessor(),
             'image': ImageProcessor(bedrock_client=bedrock_client),
             'audio': AudioProcessor(
@@ -97,12 +113,11 @@ class MultimodalPreprocessor:
             'conversation': ConversationProcessor(),
         }
         
-        # 别名映射
+        # 别名映射 - text 不再映射到 document
         self._type_aliases = {
             'pdf': 'document',
             'docx': 'document',
             'txt': 'document',
-            'text': 'document',
             'img': 'image',
             'picture': 'image',
             'photo': 'image',

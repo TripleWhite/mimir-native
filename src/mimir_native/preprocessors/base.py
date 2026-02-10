@@ -24,18 +24,33 @@ class RawContent:
         chunks: 语义分块列表
         metadata: 元数据字典
         occurred_at: 关键发生时间（用于时序处理）
+        id: 内容ID（可选）
+        user_id: 用户ID（从metadata获取）
+        content_type: 内容类型
     """
     text: str
     summary: Optional[str] = None
     chunks: Optional[List[str]] = None
     metadata: Dict[str, Any] = None
     occurred_at: Optional[datetime] = None
+    id: Optional[str] = None
+    content_type: Optional[str] = None
     
     def __post_init__(self):
         if self.chunks is None:
             self.chunks = []
         if self.metadata is None:
             self.metadata = {}
+    
+    @property
+    def user_id(self) -> Optional[str]:
+        """从metadata获取user_id"""
+        return self.metadata.get('user_id') if self.metadata else None
+    
+    @property
+    def raw_text(self) -> str:
+        """兼容旧代码"""
+        return self.text
 
 
 class BasePreprocessor(ABC):
@@ -143,8 +158,8 @@ def parse_date(date_str: Optional[str]) -> Optional[datetime]:
     支持多种常见格式：
     - "7 May 2023"
     - "2023-05-07"
-    - "2023/05/07"
     - "May 7, 2023"
+    - "1:56 pm on 8 May, 2023" (LoCoMo 格式)
     - ISO 格式
     
     Args:
@@ -159,11 +174,24 @@ def parse_date(date_str: Optional[str]) -> Optional[datetime]:
     if isinstance(date_str, datetime):
         return date_str
     
+    date_str = date_str.strip()
+    
+    # 处理 LoCoMo 格式: "1:56 pm on 8 May, 2023" 或 "1:56 pm on 8 May 2023"
+    # 提取 "on" 后面的日期部分
+    if ' on ' in date_str.lower():
+        parts = date_str.lower().split(' on ')
+        if len(parts) >= 2:
+            date_str = parts[-1].strip()  # 取 "on" 后面的部分
+    
     formats = [
-        "%d %B %Y",      # 7 May 2023
-        "%d %b %Y",      # 7 May 2023
+        "%d %B, %Y",     # 8 May, 2023
+        "%d %B %Y",      # 8 May 2023
+        "%d %b, %Y",     # 8 May, 2023
+        "%d %b %Y",      # 8 May 2023
         "%B %d, %Y",     # May 7, 2023
         "%b %d, %Y",     # May 7, 2023
+        "%B %d %Y",      # May 7 2023
+        "%b %d %Y",      # May 7 2023
         "%Y-%m-%d",      # 2023-05-07
         "%Y/%m/%d",      # 2023/05/07
         "%d-%m-%Y",      # 07-05-2023

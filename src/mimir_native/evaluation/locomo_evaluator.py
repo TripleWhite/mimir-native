@@ -74,7 +74,12 @@ class LoCoMoEvaluator:
         message_metadata = []
 
         for session_key, messages in conversation.items():
-            if not session_key.startswith('session_'):
+            # 只处理 session_X 键，跳过 _date_time 和其他键
+            if not (session_key.startswith('session_') and '_date_time' not in session_key):
+                continue
+            
+            # 跳过非列表类型的值（如日期字符串）
+            if not isinstance(messages, list):
                 continue
 
             # 获取 session 日期（关键！）
@@ -112,7 +117,7 @@ class LoCoMoEvaluator:
 
         # 第三阶段：批量存储原始内容并收集 raw_content 对象
         raw_contents = []
-        from app.mimir_v2.database import RawContentCreate
+        from ..database import RawContentCreate
 
         for preproc_content, metadata in zip(preproc_contents, message_metadata):
             raw_content_create = RawContentCreate(

@@ -62,22 +62,27 @@ class MemoryAgent:
         Returns:
             List[Memory]: 创建/更新的记忆列表
         """
-        if not raw_content.raw_text:
+        # 获取文本内容 (RawContent.text 或 raw_text)
+        text_content = getattr(raw_content, 'text', None) or getattr(raw_content, 'raw_text', '')
+        if not text_content:
             logger.warning("原始内容为空，跳过处理")
             return []
 
         # 1. 分块处理（如果内容过长）
-        chunks = self._chunk_content(raw_content.raw_text)
+        chunks = self._chunk_content(text_content)
         all_memories = []
         all_facts = []  # 收集所有事实用于批量处理
 
         # 解析元数据
         metadata = {}
         if raw_content.metadata:
-            try:
-                metadata = json.loads(raw_content.metadata)
-            except json.JSONDecodeError:
-                logger.warning(f"无法解析元数据: {raw_content.metadata}")
+            if isinstance(raw_content.metadata, dict):
+                metadata = raw_content.metadata
+            elif isinstance(raw_content.metadata, str):
+                try:
+                    metadata = json.loads(raw_content.metadata)
+                except json.JSONDecodeError:
+                    logger.warning(f"无法解析元数据: {raw_content.metadata}")
 
         # 2. 对每个块提取事实
         for chunk in chunks:

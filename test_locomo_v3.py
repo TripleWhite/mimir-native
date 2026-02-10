@@ -100,15 +100,15 @@ def test_locomo_v3():
             contexts = mimir.query(question, user_id='locomo_test', top_k=5)
             context_text = "\n".join([str(c.memory.content if hasattr(c, 'memory') else c) for c in contexts])
             
-            # 答案生成 prompt
-            prompt = f"""Based on the context, answer the question concisely with specific date if mentioned.
+            # 答案生成 prompt - 修复版：强制简洁回答
+            prompt = f"""Answer the question using ONLY the context provided. Maximum 10 words. No explanations. Facts only.
 
 Context:
 {context_text[:3000]}
 
 Question: {question}
 
-Answer (be specific with dates):"""
+Answer (max 10 words, no explanations):"""
             
             prediction = llm.invoke_mistral(prompt, max_tokens=100, temperature=0.0)
         except Exception as e:

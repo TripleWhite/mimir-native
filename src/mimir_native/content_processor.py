@@ -97,6 +97,26 @@ class TemporalNormalizer:
         
         return None
     
+    def format_date(self, date: datetime, remove_leading_zero: bool = True) -> str:
+        """
+        格式化日期，可选择去除前导零
+        
+        Args:
+            date: datetime 对象
+            remove_leading_zero: 是否去除日期的前导零
+        
+        Returns:
+            格式化后的日期字符串
+        """
+        day = date.day
+        month = date.strftime('%B')
+        year = date.year
+        
+        if remove_leading_zero:
+            return f"{day} {month} {year}"
+        else:
+            return date.strftime('%d %B %Y')
+    
     def normalize(self, text: str, reference_date: str) -> str:
         """
         标准化文本中的相对时间
@@ -114,30 +134,29 @@ class TemporalNormalizer:
         
         result = text
         
-        # yesterday → 昨天日期
+        # yesterday → 昨天日期 (去除前导零)
         if re.search(r'\byesterday\b', result, re.IGNORECASE):
             yesterday = ref_date - timedelta(days=1)
-            result = re.sub(r'\byesterday\b', yesterday.strftime('%d %B %Y'), result, flags=re.IGNORECASE)
+            result = re.sub(r'\byesterday\b', self.format_date(yesterday), result, flags=re.IGNORECASE)
         
-        # today → 当天日期
+        # today → 当天日期 (去除前导零)
         if re.search(r'\btoday\b', result, re.IGNORECASE):
-            today_str = ref_date.strftime('%d %B %Y')
-            result = re.sub(r'\btoday\b', today_str, result, flags=re.IGNORECASE)
+            result = re.sub(r'\btoday\b', self.format_date(ref_date), result, flags=re.IGNORECASE)
         
-        # tomorrow → 明天日期
+        # tomorrow → 明天日期 (去除前导零)
         if re.search(r'\btomorrow\b', result, re.IGNORECASE):
             tomorrow = ref_date + timedelta(days=1)
-            result = re.sub(r'\btomorrow\b', tomorrow.strftime('%d %B %Y'), result, flags=re.IGNORECASE)
+            result = re.sub(r'\btomorrow\b', self.format_date(tomorrow), result, flags=re.IGNORECASE)
         
-        # last week → 上周同一天
+        # last week → 上周同一天 (去除前导零)
         if re.search(r'\blast week\b', result, re.IGNORECASE):
             last_week = ref_date - timedelta(days=7)
-            result = re.sub(r'\blast week\b', last_week.strftime('%d %B %Y'), result, flags=re.IGNORECASE)
+            result = re.sub(r'\blast week\b', self.format_date(last_week), result, flags=re.IGNORECASE)
         
-        # next week → 下周同一天
+        # next week → 下周同一天 (去除前导零)
         if re.search(r'\bnext week\b', result, re.IGNORECASE):
             next_week = ref_date + timedelta(days=7)
-            result = re.sub(r'\bnext week\b', next_week.strftime('%d %B %Y'), result, flags=re.IGNORECASE)
+            result = re.sub(r'\bnext week\b', self.format_date(next_week), result, flags=re.IGNORECASE)
         
         # last year → 去年
         if re.search(r'\blast year\b', result, re.IGNORECASE):
@@ -149,10 +168,26 @@ class TemporalNormalizer:
             next_year = str(ref_date.year + 1)
             result = re.sub(r'\bnext year\b', next_year, result, flags=re.IGNORECASE)
         
-        # 处理星期几
+        # 处理星期几 (去除前导零)
         result = self._replace_weekday(result, ref_date)
         
+        # 清理已有日期格式：将 "07 May 2023" 转换为 "7 May 2023"
+        result = self._normalize_existing_dates(result)
+        
         return result
+    
+    def _normalize_existing_dates(self, text: str) -> str:
+        """将文本中的日期格式标准化，去除前导零"""
+        # 匹配 "0X Month YYYY" 格式的日期
+        pattern = r'\b0(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})\b'
+        
+        def replace_date(match):
+            day = match.group(1)
+            month = match.group(2)
+            year = match.group(3)
+            return f"{day} {month} {year}"
+        
+        return re.sub(pattern, replace_date, text)
     
     def _replace_weekday(self, text: str, ref_date: datetime) -> str:
         """替换 last/next [weekday]"""
@@ -178,7 +213,7 @@ class TemporalNormalizer:
                     days_diff = 7
                 target_date = ref_date + timedelta(days=days_diff)
             
-            return target_date.strftime('%d %B %Y')
+            return self.format_date(target_date)
         
         return re.sub(pattern, replace, text, flags=re.IGNORECASE)
 
@@ -261,12 +296,26 @@ class ContentProcessor:
 参考日期：{session_date}
 
 提取规则：
-1. 提取人物属性（身份、职业、关系状态、兴趣爱好等）
-2. 提取具体事件（做了什么、什么时候、在哪里）
-3. 提取计划和意图（将要做什么）
+1. **提取人物身份信息** - 使用原文中的具体表述：
+   - 性别认同（如 "transgender woman", "trans woman", "non-binary" 等）
+   - 关系状态（如 "single", "married", "in a relationship" 等）
+   - 职业、年龄、地理位置等
+
+2. **提取具体事件**（做了什么、什么时候、在哪里）
+
+3. **提取计划和意图**（将要做什么）
+
 4. **关键：原样保留时间表达式**（如 yesterday, last year, next week）- 我会后续处理转换
-5. 每个事实应该自包含，不依赖上下文
-6. 用中文或英文输出（保持与原文相同语言）
+
+5. **每个事实应该自包含，不依赖上下文，使用原文表述**
+
+6. **重要：提取具体信息，不要泛化**
+   - ❌ 不要："Caroline is an LGBTQ person"  
+   - ✅ 要："Caroline is a transgender woman"
+   - ❌ 不要："Caroline is in a relationship"
+   - ✅ 要："Caroline is single" 或 "Caroline mentioned a tough breakup"
+
+7. 用中文或英文输出（保持与原文相同语言）
 
 **重要：不要改写或解释时间，原样保留 "yesterday", "last year" 等表达**
 
@@ -276,11 +325,12 @@ class ContentProcessor:
 [
   "Caroline visited the LGBTQ support group yesterday",
   "Caroline is a transgender woman",
+  "Caroline is single after a tough breakup",
   "Melanie painted a sunrise last year",
   "Caroline is planning to adopt a child next week"
 ]
 
-请提取所有相关事实（保留原始时间表达）："""
+请提取所有相关事实（保留原始时间表达，使用具体而非泛化的描述）："""
 
         try:
             response = self.llm.invoke_mistral(prompt, max_tokens=1000, temperature=0.0)

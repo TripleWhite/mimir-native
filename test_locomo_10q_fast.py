@@ -120,8 +120,24 @@ def test_locomo_10q_fast():
                 # 按相关性排序（分数高的在前）
                 contexts.sort(key=lambda x: x.score if hasattr(x, 'score') else 0, reverse=True)
                 
-                # 只取最相关的 3 条，避免干扰
-                context_text = "\n".join([str(c.memory if hasattr(c, 'memory') else c) for c in contexts[:3]])
+                # 只取最相关的 3 条，每条限制长度
+                selected_contexts = []
+                total_len = 0
+                max_total = 8000  # 严格限制总长度
+                
+                for c in contexts[:3]:
+                    content = str(c.memory.content if hasattr(c, 'memory') else c)
+                    # 限制单条长度
+                    if len(content) > 1000:
+                        content = content[:1000] + "..."
+                    
+                    if total_len + len(content) < max_total:
+                        selected_contexts.append(content)
+                        total_len += len(content) + 1
+                    else:
+                        break
+                
+                context_text = "\n".join(selected_contexts)
                 
                 # 优化 prompt - 更明确的指令
                 prompt = f"""You are a helpful assistant. Answer the question based ONLY on the provided context.

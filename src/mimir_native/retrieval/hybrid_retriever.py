@@ -20,6 +20,14 @@ from dataclasses import dataclass
 from enum import Enum
 from collections import defaultdict
 
+# 添加增强检索支持
+try:
+    from mimir_native.enhanced_retrieval import QueryEnhancer
+    ENHANCED_RETRIEVAL_AVAILABLE = True
+except ImportError:
+    ENHANCED_RETRIEVAL_AVAILABLE = False
+    logger.warning("增强检索模块不可用，使用基础检索")
+
 logger = logging.getLogger(__name__)
 
 
@@ -110,26 +118,47 @@ class HybridRetriever:
         filters: Dict = None
     ) -> List[RetrievalResult]:
         """
-        主检索接口
-        
-        Args:
-            query: 查询文本
-            user_id: 用户 ID
-            query_type: 查询类型（自动检测或指定）
-            top_k: 返回结果数
-            filters: 可选过滤条件
-        
-        Returns:
-            融合排序后的结果列表
+        主检索接口（增强版）
         """
+        # 0. 查询增强（解析时间、平台等隐含信息）
+        enhanced_filters = filters or {}
+        enhanced_query = query
+        
+        if ENHANCED_RETRIEVAL_AVAILABLE:
+            try:
+                enhancer = QueryEnhancer()
+                enhanced = enhancer.enhance(query)
+                enhanced_query = enhanced['enhanced_query']
+                
+                # 添加时间过滤
+                if enhanced['time_range']:
+                    enhanced_filters['time_range'] = enhanced['time_range']
+                
+                # 添加平台过滤
+                if enhanced['platform']:
+                    enhanced_filters['source_platform'] = enhanced['platform']
+                
+                # 添加关键词
+                if enhanced['keywords']:
+                    enhanced_filters['keywords'] = enhanced['keywords']
+                
+                logger.info(f"查询增强: '{query}' -> '{enhanced_query}'")
+                if enhanced['time_range']:
+                    logger.info(f"时间过滤: {enhanced['time_range']}")
+                if enhanced['platform']:
+                    logger.info(f"平台过滤: {enhanced['platform']}")
+                    
+            except Exception as e:
+                logger.warning(f"查询增强失败: {e}")
+        
         # 1. 自动检测查询类型
         if query_type == QueryType.HYBRID:
             query_type = self._classify_query(query)
             logger.info(f"查询类型自动检测: {query_type.value}")
         
-        # 2. 并行检索（各信号独立召回）
-        vector_results = self._vector_search(query, user_id, top_k * 5, filters)  # 增加召回数量
-        fts_results = self._fts_search(query, user_id, top_k * 5, filters)  # 增加召回数量
+        # 2. 并行检索（使用增强后的查询）
+        vector_results = self._vector_search(enhanced_query, user_id, top_k * 5, enhanced_filters)
+        fts_results = self._fts_search(enhanced_query, user_id, top_k * 5, enhanced_filters)
         
         temporal_results = []
         graph_results = []

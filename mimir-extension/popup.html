@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      width: 320px;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a2e;
+      color: #fff;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #333;
+    }
+    .logo {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+    .title {
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .subtitle {
+      font-size: 12px;
+      color: #888;
+    }
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #4ade80;
+    }
+    .status-dot.offline {
+      background: #ef4444;
+    }
+    .status-text {
+      font-size: 14px;
+    }
+    .btn {
+      width: 100%;
+      padding: 10px;
+      border: none;
+      border-radius: 6px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      font-size: 14px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      margin-bottom: 8px;
+    }
+    .btn:hover {
+      opacity: 0.9;
+    }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .btn-secondary {
+      background: rgba(255,255,255,0.1);
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin: 12px 0;
+    }
+    .stat-box {
+      padding: 10px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 6px;
+      text-align: center;
+    }
+    .stat-number {
+      font-size: 20px;
+      font-weight: 600;
+      color: #667eea;
+    }
+    .stat-label {
+      font-size: 11px;
+      color: #888;
+      margin-top: 4px;
+    }
+    .footer {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid #333;
+      font-size: 11px;
+      color: #666;
+      text-align: center;
+    }
+    .message {
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      margin-bottom: 12px;
+      display: none;
+    }
+    .message.success {
+      background: rgba(74, 222, 128, 0.2);
+      color: #4ade80;
+      display: block;
+    }
+    .message.error {
+      background: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">🧠</div>
+    <div>
+      <div class="title">Mimir</div>
+      <div class="subtitle">AI 对话记忆助手</div>
+    </div>
+  </div>
+
+  <div class="status">
+    <div class="status-dot" id="statusDot"></div>
+    <span class="status-text" id="statusText">正在连接...</span>
+  </div>
+
+  <div class="message" id="message"></div>
+
+  <div class="stats">
+    <div class="stat-box">
+      <div class="stat-number" id="claudeCount">0</div>
+      <div class="stat-label">Claude 对话</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-number" id="chatgptCount">0</div>
+      <div class="stat-label">ChatGPT 对话</div>
+    </div>
+  </div>
+
+  <button class="btn" id="testBtn">测试连接</button>
+  <button class="btn btn-secondary" id="captureBtn">手动捕获当前对话</button>
+  <button class="btn btn-secondary" id="clearBtn">清除本地数据</button>
+
+  <div class="footer">
+    v1.0.0 | 本地 API: localhost:3000
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

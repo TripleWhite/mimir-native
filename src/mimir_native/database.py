@@ -55,6 +55,19 @@ def adapt_datetime(dt):
     return dt.isoformat()
 
 
+def convert_datetime(s):
+    """将 SQLite 存储的字符串转换回 datetime"""
+    if s is None:
+        return None
+    if isinstance(s, datetime):
+        return s
+    try:
+        # 处理 ISO 格式字符串
+        return datetime.fromisoformat(s.replace('Z', '+00:00'))
+    except:
+        return None
+
+
 def adapt_params(params):
     """适配参数，转换 datetime 为 ISO 格式"""
     return tuple(adapt_datetime(p) if isinstance(p, datetime) else p for p in params)
@@ -720,16 +733,16 @@ class MimirDatabase:
             content=row['content'],
             content_hash=row['content_hash'],
             embedding=row['embedding'],
-            valid_at=row['valid_at'],
+            valid_at=convert_datetime(row['valid_at']),
             valid_at_confidence=row['valid_at_confidence'],
             temporal_tags=row['temporal_tags'],
             source_type=row['source_type'],
             source_id=row['source_id'],
             source_metadata=row['source_metadata'],
-            created_at=row['created_at'],
-            updated_at=row['updated_at'],
+            created_at=convert_datetime(row['created_at']),
+            updated_at=convert_datetime(row['updated_at']),
             access_count=row['access_count'],
-            last_accessed=row['last_accessed'],
+            last_accessed=convert_datetime(row['last_accessed']),
             version=row['version'],
             superseded_by=row['superseded_by'],
             fts_docid=row['fts_docid']

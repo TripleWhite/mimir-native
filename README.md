@@ -1,90 +1,256 @@
 # Mimir-Native
 
-**SQLite-native Memory Layer with Temporal Knowledge Graph**
+**个人 AI 记忆中枢系统** - 基于 SQLite + 向量索引的本地化记忆层
 
-Mimir-Native is a fully self-contained memory system for AI applications, built entirely on SQLite with vector and full-text search extensions. No external vector databases or graph stores required.
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## 🏗️ Architecture
+---
 
+## 🎯 项目愿景
+
+Mimir 是个人 AI 生态的**记忆中枢**。
+
+> *"用户不想学会如何操作 Agent，用户只想要结果。"*
+
+当用户说：
 ```
-┌─────────────────────────────────────────────┐
-│  Query Interface (Hybrid Retriever)         │
-│  - Vector similarity (sqlite-vec)           │
-│  - Full-text search (FTS5)                  │
-│  - Graph traversal (NetworkX)               │
-│  - Temporal filtering                       │
-├─────────────────────────────────────────────┤
-│  Knowledge Graph (Temporal)                 │
-│  - Entity extraction (LLM)                  │
-│  - Relation extraction                      │
-│  - Temporal resolution                      │
-│  - Conflict resolution                      │
-├─────────────────────────────────────────────┤
-│  Memory Agent                               │
-│  - Fact extraction                          │
-│  - Deduplication                            │
-│  - Embedding generation                     │
-├─────────────────────────────────────────────┤
-│  Storage (SQLite)                           │
-│  - sqlite-vec for vectors                   │
-│  - FTS5 for text search                     │
-│  - JSON for raw content                     │
-└─────────────────────────────────────────────┘
+"Mimir，帮我剪个视频，主题是我今天收藏的关于新中式的设计理念。
+素材用我眼镜拍的，旁白参考我昨天在 Plaud 里录的那段产品理念。"
 ```
 
-## 🚀 Quick Start
+只有 Mimir 能做到这一点，因为它拥有**完整的用户记忆**（跨平台、跨设备、跨时间）。
+
+---
+
+## 🏗️ 系统架构
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    输入层 (Ingestion)                        │
+├─────────────┬─────────────┬─────────────┬─────────────────────┤
+│ AI 对话      │ 社交媒体     │ 本地文件     │ 实时数据            │
+│ (Claude)    │ (微信收藏)   │ (PDF/图片)  │ (眼镜/录音)         │
+└──────┬──────┴──────┬──────┴──────┬──────┴──────────┬──────────┘
+       │             │             │                 │
+       └─────────────┴──────┬──────┴─────────────────┘
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│                 Processing 层 (内容处理)                      │
+├─────────────────────────────────────────────────────────────┤
+│  1. 时序标准化 (Temporal Normalization)                      │
+│     - "yesterday" → "7 May 2023"                           │
+│     - "last year" → "2022"                                  │
+│                                                              │
+│  2. 事实提取 (Fact Extraction)                              │
+│     - LLM 智能提取客观事实                                   │
+│     - 保留人物属性、事件、计划                                │
+│                                                              │
+│  3. 元数据标注 (Metadata Tagging)                           │
+│     - 实体识别 (Entities)                                    │
+│     - 主题分类 (Topics)                                      │
+│     - 时间信息 (Temporal)                                    │
+└──────────────────────────┬──────────────────────────────────┘
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   存储层 (Storage)                           │
+├─────────────────────────────────────────────────────────────┤
+│  SQLite + sqlite-vec                                         │
+│  - 文本内容 + 向量嵌入                                        │
+│  - 结构化元数据                                               │
+│  - 支持语义检索 + 关键词检索                                   │
+└──────────────────────────┬──────────────────────────────────┘
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                 调用层 (Retrieval)                           │
+├─────────────────────────────────────────────────────────────┤
+│  混合检索策略：                                               │
+│  - 向量相似度 (语义匹配)                                       │
+│  - BM25 (关键词匹配)                                          │
+│  - 时间范围过滤                                               │
+│  - 实体标签过滤                                               │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🚀 快速开始
+
+### 安装
+
+```bash
+# 克隆仓库
+git clone https://github.com/TripleWhite/mimir-native.git
+cd mimir-native
+
+# 安装依赖
+pip install -r requirements.txt
+```
+
+### 基础使用
 
 ```python
 from mimir_native import MimirMemory
+from mimir_native.llm_client import BedrockClient
 
-# Initialize
+# 初始化
 mimir = MimirMemory(db_path="mimir.db")
+llm = BedrockClient()
 
-# Add content
+# 添加内容
 memories = mimir.add_content(
-    content="Caroline visited the LGBTQ support group on May 7, 2023.",
-    content_type="conversation"
+    content="Caroline visited the LGBTQ support group yesterday.",
+    content_type="text",
+    metadata={"session_date": "8 May 2023"}
 )
 
-# Search
-results = mimir.search(
-    query="When did Caroline visit the support group?",
-    query_type="temporal"
+# 查询记忆
+results = mimir.query(
+    query="When did Caroline go to the support group?",
+    top_k=5
 )
+
+for r in results:
+    print(r.memory.content)
+    # 输出: Caroline visited the LGBTQ support group on 07 May 2023
 ```
 
-## 📦 Installation
+### LoCoMo 测试
 
 ```bash
-pip install mimir-native
+# 运行 LoCoMo 基准测试
+python3 test_locomo_v3.py
+
+# 预期结果：F1 ≈ 12%
 ```
 
-## 🧪 LoCoMo Benchmark
+---
 
-Mimir-Native is designed to excel at the LoCoMo benchmark:
+## 📊 性能指标
+
+### LoCoMo 基准测试结果
+
+| 版本 | F1 | EM | 关键改进 |
+|------|-----|-----|----------|
+| V1 (原始) | 10.33% | 0% | baseline |
+| V2 (Prompt) | 8.86% | 0% | - |
+| V3 (Pipeline) | **12.10%** | 0% | +17% ↑ |
+
+**关键突破：**
+- 时序标准化："yesterday" → "07 May 2023"
+- 日期解析：支持 "1:56 pm on 8 May, 2023" 格式
+- 答案约束：强制简洁回答（max 10 words）
+
+---
+
+## 🛠️ 技术栈
+
+| 组件 | 技术 | 说明 |
+|------|------|------|
+| 数据库 | SQLite + sqlite-vec | 本地向量存储 |
+| LLM | AWS Bedrock (Mistral) | 事实提取 + 答案生成 |
+| Embedding | Silicon Flow | 文本向量化 |
+| 时序处理 | 自定义 TemporalNormalizer | 相对时间→绝对时间 |
+
+---
+
+## 📁 项目结构
+
+```
+mimir-native/
+├── src/mimir_native/
+│   ├── __init__.py              # 主入口 MimirMemory
+│   ├── database.py              # SQLite + 向量存储
+│   ├── content_processor.py     # 内容处理 + 时序标准化
+│   ├── ingestion_pipeline.py    # 数据摄入管道
+│   ├── temporal_post_processor.py # 时序后处理
+│   ├── retrieval/               # 检索模块
+│   │   └── hybrid_retriever.py  # 混合检索
+│   └── llm_client.py            # LLM 客户端
+├── test_locomo_v3.py            # LoCoMo 测试脚本
+├── CODE_REVIEW.md               # 代码审查报告
+└── PROGRESS.md                  # 开发进度文档
+```
+
+---
+
+## 🎯 核心功能
+
+### 1. 时序标准化 (Temporal Normalization)
 
 ```python
-from mimir_native.evaluation import LoCoMoEvaluator
+from mimir_native.content_processor import TemporalNormalizer
 
-evaluator = LoCoMoEvaluator(mimir)
-results = evaluator.evaluate("locomo10.json")
-
-print(f"F1 Score: {results['overall']['f1']:.4f}")
-print(f"Exact Match: {results['overall']['em']:.4f}")
+tn = TemporalNormalizer()
+result = tn.normalize("I visited yesterday.", "8 May 2023")
+# 输出: "I visited 07 May 2023."
 ```
 
-## 🔧 Dependencies
+支持的格式：
+- yesterday → 07 May 2023
+- last year → 2022
+- next week → 15 May 2023
+- last Saturday → 06 May 2023
 
-- Python 3.9+
-- SQLite 3.35+ (with extension support)
-- sqlite-vec
-- sentence-transformers (for embeddings)
-- networkx (for knowledge graph)
+### 2. 智能事实提取
 
-## 📄 License
+```python
+from mimir_native.content_processor import ContentProcessor
 
-MIT
+processor = ContentProcessor(llm_client)
+memories = processor.process_conversation(
+    messages=[
+        {"speaker": "Caroline", "text": "I visited the group yesterday."}
+    ],
+    session_date="8 May 2023"
+)
+```
 
-## 🔗 Related
+### 3. 混合检索
 
-- [Mimir Memory](https://github.com/TripleWhite/mimir-memory-v2) - The Mimir ecosystem
+```python
+# 语义 + 关键词 + 时间过滤
+results = mimir.query(
+    query="Caroline's identity",
+    filters={
+        "time_range": "last_month",
+        "entities": ["Caroline"]
+    }
+)
+```
+
+---
+
+## 🚧 已知限制
+
+1. **LoCoMo F1**: 12% 仍低于人类水平，需要进一步优化检索和答案生成
+2. **复杂时间**: "the week before 9 June 2023" 等复杂表达式解析不完善
+3. **多跳推理**: 需要跨多个记忆片段的推理能力有限
+
+---
+
+## 📈 开发路线图
+
+| 阶段 | 功能 | 状态 |
+|------|------|------|
+| Phase 1 | 基础记忆层 (存储 + 检索) | ✅ 完成 |
+| Phase 2 | 时序标准化 + 事实提取 | ✅ 完成 |
+| Phase 3 | **Context Bridge** (跨平台集成) | 🚧 进行中 |
+| Phase 4 | 数据引力井 (微信/Plaud/眼镜接入) | 📋 计划中 |
+| Phase 5 | 个人 AI 助手 (Mimir Agent) | 📋 计划中 |
+
+---
+
+## 🤝 贡献
+
+欢迎提交 Issue 和 PR！
+
+---
+
+## 📄 许可证
+
+MIT License - 详见 [LICENSE](LICENSE)
+
+---
+
+**Built with ❤️ by Amy & 左右**

@@ -325,7 +325,16 @@ class HybridRetriever:
             搜索结果列表
         """
         try:
-            results = self.db.fts_search(query, top_k, user_id)
+            # 清理查询：移除 FTS5 特殊字符
+            # FTS5 特殊字符: " * : ^ ( ) { } [ ] - + ~ < > = & | / ? ' 
+            import re
+            clean_query = re.sub(r'[^\w\s]', ' ', query)  # 只保留字母数字和空格
+            clean_query = re.sub(r'\s+', ' ', clean_query).strip()  # 合并多个空格
+            
+            if not clean_query:
+                return []
+            
+            results = self.db.fts_search(clean_query, top_k, user_id)
             return [
                 {
                     'memory_id': r['memory_id'],

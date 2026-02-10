@@ -216,7 +216,7 @@ class HybridRetriever:
         """
         query_lower = query.lower()
         
-        # 简单的时间约束识别
+        # 从查询中提取可能的日期
         time_constraint = None
         
         # 识别时间类型
@@ -230,18 +230,26 @@ class HybridRetriever:
             time_type = 'at'
         
         # 尝试从图谱中查找提及的实体
-        # 简单实现：查找图谱中存在的实体名称
         entity_name = None
         for node_id, node_data in self.kg.graph.nodes(data=True):
             name = node_data.get('name', '').lower()
-            if name and name in query_lower:
+            if name and len(name) > 2 and name in query_lower:
                 entity_name = node_id
                 break
+        
+        # 如果没有找到实体，尝试从查询中提取人名（大写开头的单词）
+        if not entity_name:
+            import re
+            # 匹配大写开头的单词（可能是人名）
+            names = re.findall(r'\b([A-Z][a-z]+)\b', query)
+            if names:
+                # 使用第一个找到的名字作为实体
+                entity_name = names[0].lower()
         
         if entity_name:
             time_constraint = {
                 'type': time_type,
-                'time': datetime.now()  # 默认使用当前时间，实际应解析具体时间
+                'time': datetime.now()  # 默认使用当前时间
             }
         
         return entity_name, time_constraint

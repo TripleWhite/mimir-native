@@ -192,10 +192,13 @@ def parse_date(date_str: Optional[str]) -> Optional[datetime]:
         "%b %d, %Y",     # May 7, 2023
         "%B %d %Y",      # May 7 2023
         "%b %d %Y",      # May 7 2023
+        "%B %Y",         # June 2023
+        "%b %Y",         # Jun 2023
         "%Y-%m-%d",      # 2023-05-07
         "%Y/%m/%d",      # 2023/05/07
         "%d-%m-%Y",      # 07-05-2023
         "%d/%m/%Y",      # 07/05/2023
+        "%Y",            # 2022
         "%Y-%m-%dT%H:%M:%S",  # ISO 格式
         "%Y-%m-%d %H:%M:%S",
     ]

@@ -210,22 +210,33 @@ class TemporalResolver:
         """
         resolved = {}
         
-        # 常见相对时间模式
+        if not text:
+            return resolved
+        
+        # 常见相对时间模式 - 改进匹配
         patterns = [
             r'\b(yesterday|today|tomorrow|the day before|the next day)\b',
             r'\b(last|this|next) week\b',
             r'\b(last|this|next) month\b',
             r'\b(last|this|next) year\b',
-            r'\b(last|this|next) (Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)s?\b',
-            r'\b(\w+|\d+) (day|week|month|year)s? ago\b',
+            r'\b(last|this|next) (monday|tuesday|wednesday|thursday|friday|saturday|sunday)s?\b',
+            r'\b(\d+|one|two|three|four|five|six|seven|eight|nine|ten|a|an) (day|week|month|year)s? ago\b',
         ]
         
+        text_lower = text.lower()
+        
         for pattern in patterns:
-            for match in re.finditer(pattern, text, re.IGNORECASE):
-                expr = match.group(0)
-                absolute = self.resolve_relative_time(expr, reference_date)
-                if absolute:
-                    resolved[expr] = absolute
+            try:
+                for match in re.finditer(pattern, text_lower, re.IGNORECASE):
+                    expr = match.group(0)
+                    # 从原始文本中获取原始大小写
+                    start, end = match.span()
+                    original_expr = text[start:end]
+                    absolute = self.resolve_relative_time(expr, reference_date)
+                    if absolute:
+                        resolved[original_expr] = absolute
+            except Exception as e:
+                logger.debug(f"Pattern matching error: {e}")
         
         return resolved
 

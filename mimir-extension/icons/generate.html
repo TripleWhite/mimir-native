@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Generate Icons</title>
+</head>
+<body>
+  <canvas id="c16" width="16" height="16"></canvas>
+  <canvas id="c48" width="48" height="48"></canvas>
+  <canvas id="c128" width="128" height="128"></canvas>
+  <script>
+    function drawIcon(size, canvas) {
+      const ctx = canvas.getContext('2d');
+      
+      // Background gradient
+      const gradient = ctx.createLinearGradient(0, 0, size, size);
+      gradient.addColorStop(0, '#667eea');
+      gradient.addColorStop(1, '#764ba2');
+      
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.roundRect(0, 0, size, size, size * 0.2);
+      ctx.fill();
+      
+      // Brain icon (simplified)
+      ctx.fillStyle = '#fff';
+      ctx.font = `bold ${size * 0.6}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('M', size / 2, size / 2);
+    }
+    
+    drawIcon(16, document.getElementById('c16'));
+    drawIcon(48, document.getElementById('c48'));
+    drawIcon(128, document.getElementById('c128'));
+  </script>
+</body>
+</html>

@@ -137,8 +137,8 @@ class BatchProcessor:
 
 输出示例:
 [
-  {{"source_idx": 0, "fact": "Caroline visited the LGBTQ support group on 7 May 2023.", "temporal_info": {{"absolute_time": "2023-05-07"}}, "entities": ["Caroline", "LGBTQ support group"]}},
-  {{"source_idx": 1, "fact": "Melanie painted a sunrise.", "temporal_info": {{}}, "entities": ["Melanie"]}}
+  {{"source_idx": 0, "fact": "Caroline visited the LGBTQ support group yesterday.", "temporal_info": {{"absolute_time": null, "relative_time": "yesterday"}}, "entities": ["Caroline", "LGBTQ support group"]}},
+  {{"source_idx": 1, "fact": "Melanie painted a sunrise last year.", "temporal_info": {{"absolute_time": null, "relative_time": "last year"}}, "entities": ["Melanie"]}}
 ]
 
 请提取所有事实:"""
@@ -148,11 +148,38 @@ class BatchProcessor:
             import json
             facts = json.loads(response)
             
-            # 添加原始 metadata
+            # 添加原始 metadata 并应用时间解析
+            from .temporal_resolver import TemporalResolver
+            resolver = TemporalResolver()
+            
             for fact in facts:
                 idx = fact.get('source_idx', 0)
                 if idx < len(items):
-                    fact['metadata'] = items[idx].get('metadata', {})
+                    metadata = items[idx].get('metadata', {})
+                    fact['metadata'] = metadata
+                    
+                    # 应用时间解析
+                    session_date = metadata.get('session_date')
+                    if session_date:
+                        from .preprocessors.base import parse_date
+                        try:
+                            ref_date = parse_date(session_date)
+                            if ref_date:
+                                fact_text = fact.get('fact', '')
+                                resolved = resolver.extract_and_resolve(fact_text, ref_date)
+                                if resolved:
+                                    # 在事实后附加绝对时间
+                                    for expr, absolute in resolved.items():
+                                        if absolute not in fact_text:
+                                            fact_text += f" (Date: {absolute})"
+                                    fact['fact'] = fact_text
+                                    # 更新 temporal_info
+                                    if not fact.get('temporal_info', {}).get('absolute_time'):
+                                        if 'temporal_info' not in fact:
+                                            fact['temporal_info'] = {}
+                                        fact['temporal_info']['absolute_time'] = list(resolved.values())[0]
+                        except Exception as e:
+                            logger.debug(f"时间解析失败: {e}")
             
             return facts
         except Exception as e:

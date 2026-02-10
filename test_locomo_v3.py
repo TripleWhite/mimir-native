@@ -100,6 +100,13 @@ def test_locomo_v3():
             contexts = mimir.query(question, user_id='locomo_test', top_k=5)
             context_text = "\n".join([str(c.memory.content if hasattr(c, 'memory') else c) for c in contexts])
             
+            # 调试：打印上下文
+            if i <= 3:  # 只打印前3题
+                print(f"\n      📄 Context ({len(contexts)} memories):")
+                for j, ctx in enumerate(contexts[:3], 1):
+                    content = str(ctx.memory.content if hasattr(ctx, 'memory') else ctx)
+                    print(f"         {j}. {content[:80]}...")
+            
             # 答案生成 prompt - 修复版：强制简洁回答
             prompt = f"""Answer the question using ONLY the context provided. Maximum 10 words. No explanations. Facts only.
 

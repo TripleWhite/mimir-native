@@ -65,11 +65,20 @@ class TemporalNormalizer:
         if not date_str:
             return None
         
+        # 首先清理 LoCoMo 格式: "1:56 pm on 8 May, 2023" -> "8 May 2023"
+        # 匹配 "time on date" 或 "time at date" 格式
+        locomo_match = re.search(r'\d{1,2}:\d{2}\s*(?:am|pm)\s+(?:on|at)\s+([\d]{1,2}\s+[A-Za-z]+,?\s*\d{4})', date_str, re.IGNORECASE)
+        if locomo_match:
+            date_str = locomo_match.group(1)
+        
+        # 移除逗号 "8 May, 2023" -> "8 May 2023"
+        date_str = date_str.replace(',', '')
+        
         formats = [
             '%d %B %Y',      # 8 May 2023
             '%d %b %Y',      # 8 May 2023
             '%Y-%m-%d',      # 2023-05-08
-            '%B %d, %Y',     # May 8, 2023
+            '%B %d %Y',      # May 8 2023
         ]
         
         for fmt in formats:
@@ -79,7 +88,7 @@ class TemporalNormalizer:
                 continue
         
         # 手动解析 "8 May 2023"
-        match = re.match(r'(\d{1,2})\s+([A-Za-z]+)\s*,?\s*(\d{4})', date_str)
+        match = re.match(r'(\d{1,2})\s+([A-Za-z]+)\s*(\d{4})', date_str)
         if match:
             day, month_str, year = match.groups()
             month = self.MONTH_MAP.get(month_str.lower())
@@ -190,17 +199,29 @@ class ContentProcessor:
         source_type: str = 'conversation'
     ) -> List[Dict]:
         """
-        处理对话内容 - LLM 提取 + 时序标准化
+        处理对话内容 - 时序标准化 + LLM 提取
         """
         processed_memories = []
         
-        # 合并对话为文本（带说话人信息）
+        # 1. 先对每条消息进行时序标准化（关键！在 LLM 之前）
+        normalized_messages = []
+        for msg in messages:
+            normalized_text = self.temporal_normalizer.normalize(
+                msg.get('text', ''), 
+                session_date
+            )
+            normalized_messages.append({
+                'speaker': msg.get('speaker', 'Unknown'),
+                'text': normalized_text
+            })
+        
+        # 2. 合并标准化后的对话文本
         conversation_text = "\n".join([
-            f"{msg.get('speaker', 'Unknown')}: {msg.get('text', '')}"
-            for msg in messages
+            f"{msg['speaker']}: {msg['text']}"
+            for msg in normalized_messages
         ])
         
-        # 1. LLM 智能提取事实
+        # 3. LLM 智能提取事实（基于已标准化的文本）
         facts = self._llm_extract_facts(conversation_text, session_date)
         
         # 2. 每条事实进行时序标准化并创建记忆
@@ -243,9 +264,11 @@ class ContentProcessor:
 1. 提取人物属性（身份、职业、关系状态、兴趣爱好等）
 2. 提取具体事件（做了什么、什么时候、在哪里）
 3. 提取计划和意图（将要做什么）
-4. 保留原始时间表达式（如 yesterday, last year）- 我会后续处理
+4. **关键：原样保留时间表达式**（如 yesterday, last year, next week）- 我会后续处理转换
 5. 每个事实应该自包含，不依赖上下文
 6. 用中文或英文输出（保持与原文相同语言）
+
+**重要：不要改写或解释时间，原样保留 "yesterday", "last year" 等表达**
 
 输出格式：JSON 字符串数组，每行一个事实
 
@@ -254,10 +277,10 @@ class ContentProcessor:
   "Caroline visited the LGBTQ support group yesterday",
   "Caroline is a transgender woman",
   "Melanie painted a sunrise last year",
-  "Caroline is planning to adopt a child"
+  "Caroline is planning to adopt a child next week"
 ]
 
-请提取所有相关事实："""
+请提取所有相关事实（保留原始时间表达）："""
 
         try:
             response = self.llm.invoke_mistral(prompt, max_tokens=1000, temperature=0.0)

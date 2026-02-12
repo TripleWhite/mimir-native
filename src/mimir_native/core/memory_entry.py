@@ -4,7 +4,10 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 from enum import Enum
-import numpy as np
+try:
+    import numpy as np
+except ImportError:
+    np = None
 import hashlib
 
 

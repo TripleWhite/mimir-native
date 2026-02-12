@@ -8,7 +8,10 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 import json
 import hashlib
-import numpy as np
+try:
+    import numpy as np
+except ImportError:
+    np = None
 from pathlib import Path
 
 

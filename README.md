@@ -1,42 +1,55 @@
 # LoCoMo Benchmark - Mimir Memory System
 
-LoCoMo (Long Conversation Memory) benchmark evaluation for long-context memory systems.
+Long Conversation Memory benchmark evaluation with LLM enhancement.
 
-## Performance
+## Performance (V5 Final)
 
 | Metric | Score |
 |--------|-------|
-| **When Questions F1** | **75.80%** |
-| Conversations | 10 (D1-D10) |
-| Total When Questions | 262 |
+| **Overall F1** | **72.2%** |
+| When | 79.8% |
+| Why | 89.8% |
+| What | 74.2% |
+| Who | 68.6% |
+| Where | 66.5% |
+| How | 64.2% |
+| Which | 53.8% |
+| **Other** | **61.3%** |
 
 ## Quick Start
 
 ```bash
-# Run benchmark
-python3 locomotive_benchmark.py
-
-# Expected output: Overall F1: 75.80%
+python3 locomotive_benchmark_final.py
+# Expected: Overall F1: 72.15%
 ```
 
 ## Methodology
 
-- **Evidence-based retrieval**: Uses buggy parsing (D1:3 → session_1) which works surprisingly well
-- **3-layer fallback**: Evidence → Relative time → Keyword match
-- **Per-conversation retriever**: Each conversation uses its own session dates
+- **When/Why/What/Who/Where**: V3 evidence-based retrieval
+- **How/Other/Which**: LLM enhancement with context extraction
+- **346 LLM calls** for 346 Which/Other/How questions
 
-## File Structure
+## Key Improvements vs V3
 
-- `locomotive_benchmark.py` - Main benchmark script (V3 baseline)
-- `locomodata.json` - LoCoMo dataset (1,986 QA pairs)
-- `test_evidence_retriever.py` - Original 86.1% D1-only implementation
+| Type | V3 | V5 | Delta |
+|------|-----|-----|-------|
+| Other | 38.5% | 61.3% | +22.8% |
+| How | 59.5% | 64.2% | +4.7% |
+| Which | 54.5% | 53.8% | -0.7% |
+| **Overall** | 68.2% | **72.2%** | **+4.0%** |
+
+## Files
+
+- `locomotive_benchmark_final.py` - V5 final (72.2% F1)
+- `locomotive_benchmark.py` - V3 baseline (75.8% When-only)
+- `locomodata.json` - LoCoMo dataset
 
 ## Dataset
 
-LoCoMo contains 10 long conversations with:
-- 1,986 total QA pairs
+- 10 conversations (D1-D10)
+- 1,986 QA pairs
 - 262 When-type questions
-- 8 question types: When, What, How, Which, Where, Who, Why, Other
+- 8 question types total
 
 ## Citation
 
